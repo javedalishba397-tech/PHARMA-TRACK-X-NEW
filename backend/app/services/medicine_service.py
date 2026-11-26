@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from datetime import datetime, date
+from decimal import Decimal
 from typing import List, Optional
 from fastapi import HTTPException, status
 from sqlalchemy import or_, func
@@ -23,6 +24,7 @@ def update_batch_statuses(db: Session):
             b.status = "Depleted"
         elif b.expiry_date < today:
             b.status = "Expired"
+            b.sell_first = False  # DEF-05: Reset sell_first when batch is expired
         elif (b.expiry_date - today).days <= near_expiry_days:
             b.status = "Near-Expiry"
         else:
@@ -30,9 +32,28 @@ def update_batch_statuses(db: Session):
     db.commit()
 
 def create_medicine(db: Session, data: MedicineCreate, user_id: int) -> Medicine:
+    # DEF-01: Server-side validation against blank strings or non-positive price
+    name_clean = (data.name or "").strip()
+    generic_clean = (data.generic_name or "").strip()
+    if not name_clean:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Medicine Name is required and cannot be blank."
+        )
+    if not generic_clean:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Generic Name is required and cannot be blank."
+        )
+    if data.unit_price is None or Decimal(str(data.unit_price)) <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Retail Unit Price must be greater than zero."
+        )
+
     # FR-07: Check duplicate with same name, strength, dosage_form and manufacturer
     existing = db.query(Medicine).filter(
-        func.lower(Medicine.name) == data.name.strip().lower(),
+        func.lower(Medicine.name) == name_clean.lower(),
         func.lower(Medicine.strength) == (data.strength or "").strip().lower(),
         func.lower(Medicine.dosage_form) == (data.dosage_form or "").strip().lower(),
         func.lower(Medicine.manufacturer) == (data.manufacturer or "").strip().lower(),

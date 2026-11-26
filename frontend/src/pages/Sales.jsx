@@ -142,8 +142,22 @@ export default function Sales() {
   const total = subtotal - discountAmt;
   const hasPrescription = cart.some(c => c.requires_prescription);
 
+  const handleDiscountChange = (val) => {
+    const num = val === '' ? 0 : Math.max(0, +val);
+    setDiscount(num);
+    if (num > 10) {
+      setError(`Discount of ${num}% exceeds the allowed maximum of 10.0%.`);
+    } else if (error && error.includes('Discount')) {
+      setError('');
+    }
+  };
+
   const handleSell = async () => {
     if (cart.length === 0) return;
+    if (discount > 10) {
+      setError(`Discount of ${discount}% exceeds the allowed maximum of 10.0%.`);
+      return;
+    }
     setError(''); setLoading(true);
     try {
       const payload = {
@@ -387,7 +401,7 @@ export default function Sales() {
                   max={100}
                   step="0.5"
                   value={discount}
-                  onChange={e => setDiscount(+e.target.value)}
+                  onChange={e => handleDiscountChange(e.target.value)}
                   placeholder="0"
                 />
               </FormField>

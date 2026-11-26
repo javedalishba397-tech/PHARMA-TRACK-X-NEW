@@ -263,10 +263,10 @@ class AuditLog(Base):
 
     log_id = Column(Integer().with_variant(BigInteger, "postgresql"), primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=True, index=True)
-    action = Column(String(50), nullable=False, index=True)  # LOGIN, VOID_BILL, WRITE_OFF, ADJUST_STOCK, etc.
-    entity = Column(String(50), nullable=True)
-    entity_id = Column(String(30), nullable=True)
-    result = Column(String(10), nullable=False)  # Success, Failure
+    action = Column(String(100), nullable=False, index=True)  # LOGIN, VOID_BILL, WRITE_OFF, ADJUST_STOCK, etc.
+    entity = Column(String(100), nullable=True)
+    entity_id = Column(String(100), nullable=True)
+    result = Column(String(20), nullable=False)  # Success, Failure
     ip_address = Column(String(45), nullable=True)
     logged_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 

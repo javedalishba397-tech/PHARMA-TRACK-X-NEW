@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import List, Optional
 from datetime import datetime, date
 from decimal import Decimal
@@ -44,16 +44,23 @@ class TokenResponse(BaseModel):
 
 # --- MEDICINES & BATCHES ---
 class MedicineCreate(BaseModel):
-    name: str
-    generic_name: str
+    name: str = Field(..., min_length=1)
+    generic_name: str = Field(..., min_length=1)
     category: Optional[str] = None
     dosage_form: Optional[str] = None
     strength: Optional[str] = None
     manufacturer: Optional[str] = None
     barcode: Optional[str] = None
-    unit_price: Decimal = Field(..., ge=0)
+    unit_price: Decimal = Field(..., gt=0)
     reorder_level: int = Field(..., ge=0)
     requires_prescription: bool = False
+
+    @field_validator("name", "generic_name")
+    @classmethod
+    def validate_not_blank(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Field cannot be empty or blank")
+        return v.strip()
 
 class MedicineUpdate(BaseModel):
     name: Optional[str] = None
@@ -147,13 +154,13 @@ class SupplierOut(BaseModel):
 
 # --- PURCHASE ORDERS ---
 class POItemCreate(BaseModel):
-    medicine_id: int
+    medicine_id: int = Field(..., gt=0)
     qty_ordered: int = Field(..., gt=0)
     unit_cost: Decimal = Field(..., ge=0)
 
 class POCreate(BaseModel):
-    supplier_id: int
-    items: List[POItemCreate]
+    supplier_id: int = Field(..., gt=0)
+    items: List[POItemCreate] = Field(..., min_length=1)
     notes: Optional[str] = None
 
 class POItemOut(BaseModel):

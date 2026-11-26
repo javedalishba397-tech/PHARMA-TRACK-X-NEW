@@ -54,14 +54,23 @@ function CreatePOModal({ suppliers, onClose, onSaved }) {
   const removeLine = (i) => setLines(lines.filter((_, idx) => idx !== i));
 
   const save = async () => {
+    if (!supplierId) {
+      setError('Please select a supplier.');
+      return;
+    }
+    const validLines = lines.filter(l => l.medicine_id && +l.quantity > 0 && +l.unit_cost >= 0);
+    if (validLines.length === 0) {
+      setError('Please select a medicine and enter a valid quantity and unit cost.');
+      return;
+    }
     setError(''); setLoading(true);
     try {
       await purchasesApi.create({
         supplier_id: +supplierId,
-        items: lines.map(l => ({ medicine_id: +l.medicine_id, qty_ordered: +l.quantity, unit_cost: +l.unit_cost }))
+        items: validLines.map(l => ({ medicine_id: +l.medicine_id, qty_ordered: +l.quantity, unit_cost: +l.unit_cost }))
       });
       onSaved();
-    } catch (err) { setError(err.response?.data?.detail ?? 'Failed'); } finally { setLoading(false); }
+    } catch (err) { setError(err.response?.data?.detail ?? err.message ?? 'Failed to create purchase order'); } finally { setLoading(false); }
   };
 
   return (

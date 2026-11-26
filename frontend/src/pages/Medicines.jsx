@@ -42,10 +42,24 @@ function MedicineModal({ onClose, onSaved, existing }) {
   const [loading, setLoading] = useState(false);
 
   const save = async () => {
+    if (!form.name.trim()) {
+      setError('Medicine Name is required and cannot be blank.');
+      return;
+    }
+    if (!form.generic_name.trim()) {
+      setError('Generic Name is required and cannot be blank.');
+      return;
+    }
+    if (form.unit_price === '' || isNaN(+form.unit_price) || +form.unit_price <= 0) {
+      setError('Retail Unit Price must be greater than zero.');
+      return;
+    }
     setError(''); setLoading(true);
     try {
       const payload = {
         ...form,
+        name: form.name.trim(),
+        generic_name: form.generic_name.trim(),
         unit_price: +form.unit_price,
         reorder_level: +form.reorder_level,
       };

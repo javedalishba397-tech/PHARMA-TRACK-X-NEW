@@ -68,11 +68,39 @@ export function Btn({ variant = 'primary', size = 'md', className = '', children
   );
 }
 
+export function formatErrorMessage(err) {
+  if (!err) return '';
+  if (typeof err === 'string') return err;
+  if (Array.isArray(err)) {
+    return err
+      .map(item => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object') {
+          const field = Array.isArray(item.loc) ? item.loc[item.loc.length - 1] : '';
+          const msg = item.msg || JSON.stringify(item);
+          return field && field !== '__root__' ? `${field}: ${msg}` : msg;
+        }
+        return String(item);
+      })
+      .join('; ');
+  }
+  if (typeof err === 'object') {
+    if (err.detail) return formatErrorMessage(err.detail);
+    if (err.message) return formatErrorMessage(err.message);
+    return Object.entries(err)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join('; ');
+  }
+  return String(err);
+}
+
 export function ErrorAlert({ message }) {
   if (!message) return null;
+  const formatted = formatErrorMessage(message);
+  if (!formatted) return null;
   return (
     <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">
-      {message}
+      {formatted}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import csv
 from backend.app.models.entities import (
     Sale, SaleItem, Medicine, Batch, PurchaseOrder, PurchaseOrderItem, Supplier, User, StockAdjustment, Recommendation, DecisionLog
 )
+from backend.app.services.medicine_service import update_batch_statuses
 
 def get_sales_report(
     db: Session,
@@ -89,6 +90,7 @@ def get_sales_report(
 
 def get_stock_expiry_report(db: Session) -> Dict[str, Any]:
     """FR-53: Stock and expiry report listing current stock, near-expiry batches and expired batches."""
+    update_batch_statuses(db)
     today = date.today()
     batches = db.query(Batch).filter(Batch.qty_remaining > 0, Batch.status != "Written-Off").order_by(Batch.expiry_date.asc()).all()
 
@@ -117,6 +119,7 @@ def get_stock_expiry_report(db: Session) -> Dict[str, Any]:
             usable_rows.append(item)
 
     total_stock_value = sum(r["stock_value"] for r in usable_rows + near_expiry_rows)
+    all_rows = expired_rows + near_expiry_rows + usable_rows
 
     return {
         "report_type": "stock_expiry",
@@ -128,6 +131,13 @@ def get_stock_expiry_report(db: Session) -> Dict[str, Any]:
         "usable_batches": usable_rows,
         "near_expiry_batches": near_expiry_rows,
         "expired_batches": expired_rows,
+        "rows": all_rows,
+        "summary": {
+            "usable_batches": len(usable_rows),
+            "near_expiry_batches": len(near_expiry_rows),
+            "expired_batches": len(expired_rows),
+            "total_stock_value": round(total_stock_value, 2),
+        }
     }
 
 def get_purchase_report(
@@ -239,14 +249,27 @@ def get_recommendation_report(
     recs = db.query(Recommendation).filter(
         Recommendation.generated_at >= start_dt,
         Recommendation.generated_at <= end_dt
-    ).all()
+    ).order_by(Recommendation.generated_at.desc()).all()
 
     by_action = {"Reorder": 0, "Hold": 0, "Prioritize FEFO": 0, "Review": 0}
     by_status = {"Pending": 0, "Approved": 0, "Rejected": 0, "Modified": 0, "Superseded": 0}
 
+    rec_rows = []
     for r in recs:
         by_action[r.action] = by_action.get(r.action, 0) + 1
         by_status[r.status] = by_status.get(r.status, 0) + 1
+        med_name = r.batch.medicine.name if (r.batch and r.batch.medicine) else "Unknown"
+        batch_no = r.batch.batch_number if r.batch else "Unknown"
+        rec_rows.append({
+            "generated_date": r.generated_at.strftime("%d/%m/%Y"),
+            "medicine_name": med_name,
+            "batch_number": batch_no,
+            "action": r.action,
+            "risk_band": r.risk_band,
+            "risk_score": r.risk_score,
+            "suggested_qty": r.suggested_qty if r.suggested_qty is not None else "—",
+            "status": r.status,
+        })
 
     decided = by_status["Approved"] + by_status["Modified"] + by_status["Rejected"]
     approved_total = by_status["Approved"] + by_status["Modified"]
@@ -260,6 +283,13 @@ def get_recommendation_report(
         "by_action": by_action,
         "by_status": by_status,
         "approval_rate": round(approval_rate, 1),
+        "rows": rec_rows,
+        "summary": {
+            "total_recommendations": len(recs),
+            "approval_rate": f"{round(approval_rate, 1)}%",
+            "approved": by_status.get("Approved", 0),
+            "pending": by_status.get("Pending", 0),
+        }
     }
 
 def export_report_csv(report_data: Dict[str, Any]) -> str:

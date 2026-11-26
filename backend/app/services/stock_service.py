@@ -61,7 +61,7 @@ def get_stock_overview(db: Session) -> Dict[str, Any]:
                 "qty_remaining": b.qty_remaining,
                 "purchase_price": b.purchase_price,
                 "status": b.status,
-                "sell_first": b.sell_first,
+                "sell_first": False if (b.status == "Expired" or b.expiry_date < today) else b.sell_first,
             }
 
             # FR-33: Near-expiry alert

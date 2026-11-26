@@ -49,7 +49,10 @@ export default function Reports() {
     } finally { setExporting(false); }
   };
 
-  const rows = data?.rows ?? data?.items ?? (Array.isArray(data) ? data : []);
+  const rows = data?.rows ??
+    (data?.usable_batches ? [...(data?.expired_batches || []), ...(data?.near_expiry_batches || []), ...(data?.usable_batches || [])] : null) ??
+    data?.items ??
+    (Array.isArray(data) ? data : []);
   const summary = data?.summary ?? data?.totals ?? null;
 
   return (

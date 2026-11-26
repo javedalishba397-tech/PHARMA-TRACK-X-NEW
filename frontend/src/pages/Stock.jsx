@@ -145,7 +145,7 @@ export default function Stock() {
                   <tr key={i} className={`border-b border-gray-100 hover:bg-gray-50 ${tab === 'expired' ? 'bg-red-50/50' : 'bg-orange-50/30'}`}>
                     <td className="px-4 py-3 font-medium text-gray-900">{row.medicine_name}</td>
                     <td className="px-4 py-3 font-mono text-xs">
-                      {row.batch_number} {row.sell_first && <span className="text-orange-600 font-bold ml-1">★ SELL FIRST</span>}
+                      {row.batch_number} {row.sell_first && tab !== 'expired' && row.status !== 'Expired' && <span className="text-orange-600 font-bold ml-1">★ SELL FIRST</span>}
                     </td>
                     <td className="px-4 py-3 text-xs">{row.expiry_date}</td>
                     <td className={`px-4 py-3 text-xs font-semibold ${row.days_to_expiry < 0 ? 'text-red-600' : row.days_to_expiry <= 30 ? 'text-orange-600' : 'text-amber-600'}`}>
